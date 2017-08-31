@@ -14,12 +14,15 @@ from docopt import docopt
 
 from os.path import abspath, exists
 
+import os, sys, time
+from glob import glob
+
 import numpy as np
 
 import cv, cv2
 
 from rect_selector import RectSelector
-
+from scipy.misc import imread, imresize
 
 class MedianFlowTracker(object):
     def __init__(self):
@@ -104,7 +107,8 @@ class MedianFlowTracker(object):
 
 class API(object):
     def __init__(self, win, source):
-        self._device = cv2.VideoCapture(source)
+        self._source = source
+        #self._device = cv2.VideoCapture(source)
         if isinstance(source, str):
             self.paused = True
         else:
@@ -127,17 +131,20 @@ class API(object):
     def run(self):
         prev, curr = None, None
 
-        ret, frame = self._device.read()
-        if not ret:
-            raise IOError('can\'t reade frame')
+        data_files = []
+        read_path = os.path.join(self._source, "*.jpg")
+        data_files = glob(read_path)
+        data_files.sort()
 
+        frame = imread(data_files[0], mode='RGB') # test data in github
+
+        count = 0
         while True:
-            if not self.rect_selector.dragging and not self.paused:
-                ret, grabbed_frame = self._device.read()
-                if not ret:
-                    break
 
-            frame = grabbed_frame.copy()
+            print (data_files[count])
+            if not self.rect_selector.dragging and not self.paused:
+                count += 1
+                frame = imread(data_files[count], mode='RGB') # test data in github
 
             prev, curr = curr, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -156,6 +163,7 @@ class API(object):
                 angle = tgt[4] * 180.0 / np.pi
                 cv.Ellipse(cv.fromarray(frame), center, scale, angle, 0., 360., color, 2)
 
+
             self.rect_selector.draw(frame)
 
             cv2.imshow(self.win, frame)
@@ -165,6 +173,7 @@ class API(object):
                 break
             elif ch in (ord('p'), ord('P')):
                 self.paused = not self.paused
+
 
 
 if __name__ == "__main__":
